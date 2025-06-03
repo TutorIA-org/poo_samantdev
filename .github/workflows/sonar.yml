@@ -1,0 +1,37 @@
+name: SonarCloud
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detectar archivos Java
+        id: detect_java
+        run: |
+          count=$(find . -name "*.java" | wc -l)
+          echo "java_count=$count" >> $GITHUB_OUTPUT
+
+      - name: Compilar si hay archivos Java
+        if: steps.detect_java.outputs.java_count != '0'
+        run: |
+          mkdir -p compiled_classes
+          find . -name "*.java" > sources.txt
+          javac -d compiled_classes @sources.txt
+
+      - name: Ejecutar análisis Sonar
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: |
+            -Dsonar.java.binaries=compiled_classes
